@@ -105,7 +105,6 @@ main(int argc, char **argv)
                         printf("TCP info: SND_MSS=%u : PMTU=%u : UnACK=%u (%lu)\n", (unsigned)tcp_i.tcpi_snd_mss, (uint)tcp_i.tcpi_pmtu, tcp_i.tcpi_unacked, sizeof(tcp_i) );
                 }
 
-
 		close(connfd);
 	}
 }
