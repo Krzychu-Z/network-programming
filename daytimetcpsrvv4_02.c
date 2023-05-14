@@ -14,6 +14,7 @@
 #include        <netinet/tcp.h>         /* for TCP_MAXSEG */
 #include        <unistd.h>
 
+
 #define MAXLINE 10240
 #define COUNT 10000
 #define PORT_NR 13
@@ -27,31 +28,31 @@ main(int argc, char **argv)
 {
 	int  listenfd, connfd, sndbuf;
 	socklen_t  slen;
-	char  buff[MAXLINE], str[INET6_ADDRSTRLEN+1];
+	char  buff[MAXLINE], str[INET_ADDRSTRLEN+1];
 	time_t  ticks;
-	struct sockaddr_in6  servaddr, cliaddr;
+	struct sockaddr_in  servaddr, cliaddr;
         int  mss,i,len;
         int bufsize=2000;
         struct timeval start, stop;
 	struct tcp_info tcp_i;
 
 
-        if ( (listenfd = socket(AF_INET6, SOCK_STREAM, 0)) < 0){
+        if ( (listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
                 fprintf(stderr,"socket error : %s\n", strerror(errno));
                 return 1;
         }
 
 	bzero(&servaddr, sizeof(servaddr));
-	servaddr.sin6_family = AF_INET6;
+	servaddr.sin_family = AF_INET;
 	if(argc == 1)
-		servaddr.sin6_addr   = in6addr_any;
+		servaddr.sin_addr.s_addr   = htonl(INADDR_ANY);
 	else{
-		if( inet_pton(AF_INET6, argv[1], &servaddr.sin6_addr) != 1 ){
+		if( inet_pton(AF_INET, argv[1], &servaddr.sin_addr) != 1 ){
 			printf("ERROR: Address format error\n");
 			return -1;
 		}
 	}
-	servaddr.sin6_port   = htons(PORT_NR);	/* daytime server */
+	servaddr.sin_port   = htons(PORT_NR);	/* daytime server */
 
 #define REUSEADDR
 #ifdef REUSEADDR	
@@ -61,24 +62,19 @@ main(int argc, char **argv)
         }
 #endif
 
-#define V6ONLY
-#ifdef V6ONLY	
-        sndbuf = 1;               
-        if (setsockopt(listenfd, SOL_IPV6, IPV6_V6ONLY, &sndbuf, sizeof(sndbuf)) < 0){
-                fprintf(stderr,"IPV6_V6ONLY setsockopt error : %s\n", strerror(errno));
-        }
-#endif
 
 
-        if ( bind( listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0){
-                fprintf(stderr,"bind error : %s\n", strerror(errno));
-                return 1;
-        }
+    if ( bind( listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0){
+        fprintf(stderr,"bind error : %s\n", strerror(errno));
+        return 1;
+    }
 
-        if ( listen(listenfd, LISTENQ) < 0){
-                fprintf(stderr,"listen error : %s\n", strerror(errno));
-                return 1;
-        }
+
+    if ( listen(listenfd, LISTENQ) < 0){
+        fprintf(stderr,"listen error : %s\n", strerror(errno));
+        return 1;
+    }
+
 
 	for ( ; ; ) {
 		slen = sizeof(cliaddr);
@@ -88,7 +84,7 @@ main(int argc, char **argv)
         	}
 
 		bzero(str, sizeof(str));
-	   	inet_ntop(AF_INET6, (struct sockaddr  *) &cliaddr.sin6_addr,  str, sizeof(str));
+	   	inet_ntop(AF_INET, (struct sockaddr  *) &cliaddr.sin_addr,  str, sizeof(str));
 		printf("Connection from %s\n", str);
  
         ticks = time(NULL);
@@ -96,15 +92,14 @@ main(int argc, char **argv)
             if( write(connfd, buff, strlen(buff))< 0 )
                 fprintf(stderr,"write error : %s\n", strerror(errno));
                       
-                bzero(&tcp_i, sizeof(tcp_i));
-                int size = sizeof(tcp_i);
-                if (getsockopt(connfd, SOL_TCP, TCP_INFO, &tcp_i, &size) < 0){
-                        fprintf(stderr,"TCP_INFO setsockopt error : %s\n", strerror(errno));
-                }
-                else{
-                        printf("TCP info: SND_MSS=%u : PMTU=%u : UnACK=%u (%lu)\n", (unsigned)tcp_i.tcpi_snd_mss, (uint)tcp_i.tcpi_pmtu, tcp_i.tcpi_unacked, sizeof(tcp_i) );
-                }
-
+	        bzero(&tcp_i, sizeof(tcp_i));               
+		int size = sizeof(tcp_i);
+	        if (getsockopt(connfd, SOL_TCP, TCP_INFO, &tcp_i, &size) < 0){
+	                fprintf(stderr,"TCP_INFO setsockopt error : %s\n", strerror(errno));
+	        }
+		else{
+			printf("TCP info: SND_MSS=%u : PMTU=%u \n", (unsigned)tcp_i.tcpi_snd_mss, (uint)tcp_i.tcpi_pmtu );
+		}
 		close(connfd);
 	}
 }
