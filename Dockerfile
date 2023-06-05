@@ -7,5 +7,4 @@ RUN apt-get update &&\
 
 COPY . .
 
-RUN mv services /etc/services &&\ 
-    make
+RUN mv services /etc/services 
