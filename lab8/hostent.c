@@ -1,78 +1,53 @@
-#include        <sys/types.h>   /* basic system data types */
-#include        <sys/socket.h>  /* basic socket definitions */
-#if TIME_WITH_SYS_TIME
-#include        <sys/time.h>    /* timeval{} for select() */
-#include        <time.h>                /* timespec{} for pselect() */
-#else
-#if HAVE_SYS_TIME_H
-#include        <sys/time.h>    /* includes <time.h> unsafely */
-#else
-#include        <time.h>                /* old system? */
-#endif
-#endif
-#include        <netinet/in.h>  /* sockaddr_in{} and other Internet defns */
-#include        <arpa/inet.h>   /* inet(3) functions */
-#include        <errno.h>
-#include        <fcntl.h>               /* for nonblocking */
-#include        <netdb.h>
-#include        <signal.h>
-#include        <stdio.h>
-#include        <stdlib.h>
-#include        <string.h>
-#include 		<netdb.h>
-#include 		<resolv.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
 
-int
-main(int argc, char **argv)
-{
-	char			*ptr, **pptr;
-	char			str[INET_ADDRSTRLEN];
-	char			str6[INET6_ADDRSTRLEN];
-	struct hostent	*hptr;
+int main(int argc, char **argv) {
+    char *ptr, **pptr;
+    struct addrinfo hints, *res, *p;
+    int status;
+    char ipstr[INET6_ADDRSTRLEN];
 
-	res_init();
-	if( argc < 2 ){
-		exit(1);
-	}
-	if( argc == 3 ){
-		_res.options |= RES_USE_INET6;
-	}
+    if (argc < 2) {
+        exit(1);
+    }
 
-//	while (--argc > 0) {
-		ptr = *++argv;
-		if ( (hptr = gethostbyname(ptr)) == NULL) {
-			printf("gethostbyname error for host: %s: %s",
-					ptr, hstrerror(h_errno));
-//			continue;
-			return(1);
-		}
-		printf("official hostname: %s\n", hptr->h_name);
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC; // Allow IPv4 or IPv6
+    hints.ai_socktype = SOCK_STREAM;
 
-		printf("h_length = %d\n", hptr->h_length);
-		for (pptr = hptr->h_aliases; *pptr != NULL; pptr++)
-			printf("\talias: %s\n", *pptr);
+    if ((status = getaddrinfo(argv[1], NULL, &hints, &res)) != 0) {
+        fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
+        exit(1);
+    }
 
-		switch (hptr->h_addrtype) {
-		case AF_INET:
-			pptr = hptr->h_addr_list;
-			for ( ; *pptr != NULL; pptr++){
-		      inet_ntop(AF_INET, (struct sockaddr  *) *pptr,  str, sizeof(str));
-				printf("\taddress: %s\n", str);
-			}
-			break;
+    printf("Official hostname: %s\n", argv[1]);
 
-		case AF_INET6:
-			pptr = hptr->h_addr_list;
-			for ( ; *pptr != NULL; pptr++){
-		      inet_ntop(AF_INET6, (struct sockaddr  *) *pptr,  str6, sizeof(str6));
-				printf("\taddress: %s\n", str6);
-			}
-			break;
-		default:
-			fprintf(stderr,"unknown address type");
-			break;
-		}
-//	}
-	exit(0);
+    for (p = res; p != NULL; p = p->ai_next) {
+        void *addr;
+        char *ipver;
+
+        if (p->ai_family == AF_INET) { // IPv4
+            struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
+            addr = &(ipv4->sin_addr);
+            ipver = "IPv4";
+        } else { // IPv6
+            struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)p->ai_addr;
+            addr = &(ipv6->sin6_addr);
+            ipver = "IPv6";
+        }
+
+        // Convert the IP address to a string and print it
+        inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
+        printf("\tAddress: %s\n", ipstr);
+    }
+
+    freeaddrinfo(res); // Free the linked list
+
+    return 0;
 }
 
