@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  pc1:
+    build:
+      context: .
+      dockerfile: Dockerfile.Project
+    privileged: true
+    hostname: pc1
+    command: bash -c "
+      ip addr flush dev eth0
+      && ip addr add 10.2.10.1/24 dev eth0
+      && tail -f /dev/null"
+  pc2:
+    build:
+      context: .
+      dockerfile: Dockerfile.Project
+    privileged: true
+    hostname: pc2
+    command: bash -c "
+      ip addr flush dev eth0
+      && ip addr add 10.2.10.2/24 dev eth0
+      && tail -f /dev/null"

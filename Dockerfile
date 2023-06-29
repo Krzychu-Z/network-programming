@@ -5,7 +5,7 @@ WORKDIR /lab
 RUN apt-get update &&\
     apt-get install -y software-properties-common &&\
     add-apt-repository ppa:adiscon/v8-devel &&\
-    apt-get install -y net-tools iputils-ping iproute2 gcc make vim tcpdump kmod libsctp-dev rsyslog libpcap-dev
+    apt-get install -y net-tools iputils-ping iproute2 gcc make vim tcpdump kmod libsctp-dev rsyslog libpcap-dev libcurl4-openssl-dev telnet
 
 COPY . .
 
